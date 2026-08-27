@@ -27,7 +27,6 @@ const initialSuppliers = [
     qualityRejects: 12, totalReceived: 100, 
     poExceptions: 5, status: "Watchlist" 
   },
-  // Edge Case: Too many exceptions (for validation)
   { 
     id: "SUP005", name: "Edge Corp", material: "Gloves", 
     onTimeDeliveries: 50, totalDeliveries: 100, 
@@ -37,6 +36,7 @@ const initialSuppliers = [
 ];
 
 export default function App() {
+  // Persistence: Load from localStorage, otherwise use initial data
   const [supplierList, setSupplierList] = useState(() => {
     const saved = localStorage.getItem("supplierData");
     return saved ? JSON.parse(saved) : initialSuppliers;
@@ -46,9 +46,9 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [typedText, setTypedText] = useState("");
   const [newSupplier, setNewSupplier] = useState({ name: "", material: "", qualityRejects: "", poExceptions: "" });
 
+  // Save to localStorage whenever supplierList changes (So it persists after refresh)
   useEffect(() => {
     localStorage.setItem("supplierData", JSON.stringify(supplierList));
   }, [supplierList]);
@@ -90,9 +90,9 @@ export default function App() {
   // INTERACTIVE AI HANDLER
   const handleAskAI = (e) => {
     e.preventDefault();
-    if (!selectedSupplier || !newSupplier.name) return; // Placeholder for chat input
+    if (!selectedSupplier) return;
 
-    const question = newSupplier.name.toLowerCase(); // Using input as question
+    const question = newSupplier.name.toLowerCase();
     let response = "";
 
     if (question.includes("late") || question.includes("delivery")) {
@@ -168,6 +168,17 @@ export default function App() {
 
   return (
     <div className="app-container">
+      
+      {/* RESET DATA BUTTON */}
+      <div style={{ textAlign: 'right', marginBottom: '10px' }}>
+        <button 
+          className="btn btn-escalate" 
+          onClick={() => { localStorage.removeItem("supplierData"); window.location.reload(); }}
+        >
+          Reset Demo Data
+        </button>
+      </div>
+
       <header className="dashboard-header">
         <h1>SUPPLIER PERFORMANCE COCKPIT</h1>
         <p>S2P - Supplier Evaluation & Risk Monitoring</p>
