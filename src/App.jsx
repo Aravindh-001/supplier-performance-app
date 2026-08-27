@@ -109,16 +109,12 @@ export default function App() {
     setNewSupplier({ name: "", material: "", qualityRejects: "", poExceptions: "" });
   };
 
-  // ACTIONS & VALIDATION
+  // ACTIONS & VALIDATION (ALLOWS UNLIMITED STATE CHANGES)
   const handleAction = (action) => {
     setErrorMessage("");
     setSuccessMessage("");
 
     if (!selectedSupplier) return;
-    if (selectedSupplier.processed) {
-      setErrorMessage("This supplier has already been processed.");
-      return;
-    }
 
     // Validation: Cannot approve a high-risk supplier with bad quality
     const rejectPct = (selectedSupplier.qualityRejects / selectedSupplier.totalReceived * 100);
@@ -128,9 +124,9 @@ export default function App() {
     }
 
     setSupplierList(prev => prev.map(s => 
-      s.id === selectedSupplier.id ? { ...s, status: action, processed: true } : s
+      s.id === selectedSupplier.id ? { ...s, status: action } : s
     ));
-    setSelectedSupplier(prev => ({ ...prev, status: action, processed: true }));
+    setSelectedSupplier(prev => ({ ...prev, status: action }));
     setSuccessMessage(`Decision recorded: ${action} for ${selectedSupplier.id}`);
   };
 
