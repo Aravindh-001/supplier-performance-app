@@ -1,42 +1,15 @@
 import { useState, useMemo, useEffect } from "react";
 import "./App.css";
 
-// Seeded Supplier Data (Includes Edge Cases)
 const initialSuppliers = [
-  { 
-    id: "SUP001", name: "ABC Metals", material: "Steel Rod", 
-    onTimeDeliveries: 90, totalDeliveries: 100, 
-    qualityRejects: 3, totalReceived: 100, 
-    poExceptions: 2, status: "Approved" 
-  },
-  { 
-    id: "SUP002", name: "XYZ Ltd", material: "Copper Wire", 
-    onTimeDeliveries: 70, totalDeliveries: 100, 
-    qualityRejects: 15, totalReceived: 100, 
-    poExceptions: 8, status: "High Risk" 
-  },
-  { 
-    id: "SUP003", name: "Global Parts", material: "Bolts", 
-    onTimeDeliveries: 100, totalDeliveries: 100, 
-    qualityRejects: 0, totalReceived: 100, 
-    poExceptions: 0, status: "Approved" 
-  },
-  { 
-    id: "SUP004", name: "Prime Supplies", material: "Bearings", 
-    onTimeDeliveries: 80, totalDeliveries: 100, 
-    qualityRejects: 12, totalReceived: 100, 
-    poExceptions: 5, status: "Watchlist" 
-  },
-  { 
-    id: "SUP005", name: "Edge Corp", material: "Gloves", 
-    onTimeDeliveries: 50, totalDeliveries: 100, 
-    qualityRejects: 25, totalReceived: 100, 
-    poExceptions: 10, status: "High Risk" 
-  },
+  { id: "SUP001", name: "ABC Metals", material: "Steel Rod", onTimeDeliveries: 90, totalDeliveries: 100, qualityRejects: 3, totalReceived: 100, poExceptions: 2, status: "Approved" },
+  { id: "SUP002", name: "XYZ Ltd", material: "Copper Wire", onTimeDeliveries: 70, totalDeliveries: 100, qualityRejects: 15, totalReceived: 100, poExceptions: 8, status: "High Risk" },
+  { id: "SUP003", name: "Global Parts", material: "Bolts", onTimeDeliveries: 100, totalDeliveries: 100, qualityRejects: 0, totalReceived: 100, poExceptions: 0, status: "Approved" },
+  { id: "SUP004", name: "Prime Supplies", material: "Bearings", onTimeDeliveries: 80, totalDeliveries: 100, qualityRejects: 12, totalReceived: 100, poExceptions: 5, status: "Watchlist" },
+  { id: "SUP005", name: "Edge Corp", material: "Gloves", onTimeDeliveries: 50, totalDeliveries: 100, qualityRejects: 25, totalReceived: 100, poExceptions: 10, status: "High Risk" },
 ];
 
 export default function App() {
-  // Persistence: Load from localStorage, otherwise use initial data
   const [supplierList, setSupplierList] = useState(() => {
     const saved = localStorage.getItem("supplierData");
     return saved ? JSON.parse(saved) : initialSuppliers;
@@ -48,18 +21,20 @@ export default function App() {
   const [successMessage, setSuccessMessage] = useState("");
   const [newSupplier, setNewSupplier] = useState({ name: "", material: "", qualityRejects: "", poExceptions: "" });
 
-  // Save to localStorage whenever supplierList changes (So it persists after refresh)
+  // AI CHAT STATES
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+
   useEffect(() => {
     localStorage.setItem("supplierData", JSON.stringify(supplierList));
   }, [supplierList]);
 
-  // KPI CALCULATIONS
   const totalSuppliers = supplierList.length;
   const highRisk = supplierList.filter(s => s.status === "High Risk").length;
   const avgOnTime = Math.round(supplierList.reduce((sum, s) => sum + (s.onTimeDeliveries / s.totalDeliveries * 100), 0) / totalSuppliers);
   const avgQuality = Math.round(supplierList.reduce((sum, s) => sum + (s.qualityRejects / s.totalReceived * 100), 0) / totalSuppliers);
 
-  // SEARCH
   const filteredSuppliers = useMemo(() => {
     return supplierList.filter(s => 
       s.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -67,7 +42,6 @@ export default function App() {
     );
   }, [supplierList, searchTerm]);
 
-  // AI SUMMARY GENERATOR (Grounded in supplier data)
   const getAISummary = (supplier) => {
     const latePct = 100 - (supplier.onTimeDeliveries / supplier.totalDeliveries * 100);
     const rejectPct = (supplier.qualityRejects / supplier.totalReceived * 100);
@@ -87,36 +61,47 @@ export default function App() {
     return { summary, risk };
   };
 
-  // INTERACTIVE AI HANDLER
+  const handleSelectSupplier = (supplier) => {
+    setSelectedSupplier(supplier);
+    setErrorMessage("");
+    setSuccessMessage("");
+    
+    // Reset chat when a new supplier is selected
+    setChatHistory([]);
+    setChatInput("");
+    
+    // Add initial AI message
+    setChatHistory([{ role: "ai", text: getAISummary(supplier).summary }]);
+  };
+
   const handleAskAI = (e) => {
     e.preventDefault();
-    if (!selectedSupplier) return;
+    if (!selectedSupplier || !chatInput.trim()) return;
 
-    const question = newSupplier.name.toLowerCase();
+    const question = chatInput.toLowerCase();
     let response = "";
 
     if (question.includes("late") || question.includes("delivery")) {
-      response = `Based on data for ${selectedSupplier.id}: Their on-time delivery rate is ${selectedSupplier.onTimeDeliveries}/${selectedSupplier.totalDeliveries} (${Math.round(selectedSupplier.onTimeDeliveries / selectedSupplier.totalDeliveries * 100)}%).`;
+      response = `Based on data for ${selectedSupplier.id}: On-time delivery rate is ${selectedSupplier.onTimeDeliveries}/${selectedSupplier.totalDeliveries} (${Math.round(selectedSupplier.onTimeDeliveries / selectedSupplier.totalDeliveries * 100)}%).`;
     } else if (question.includes("quality") || question.includes("reject")) {
-      response = `Based on data for ${selectedSupplier.id}: Their quality rejection rate is ${selectedSupplier.qualityRejects}/${selectedSupplier.totalReceived} (${Math.round(selectedSupplier.qualityRejects / selectedSupplier.totalReceived * 100)}%).`;
+      response = `Based on data for ${selectedSupplier.id}: Quality rejection rate is ${selectedSupplier.qualityRejects}/${selectedSupplier.totalReceived} (${Math.round(selectedSupplier.qualityRejects / selectedSupplier.totalReceived * 100)}%).`;
     } else if (question.includes("action") || question.includes("do")) {
       response = `Recommended action for ${selectedSupplier.id}: ${getAISummary(selectedSupplier).summary}`;
     } else {
       response = `I am grounded to the data of ${selectedSupplier.id}. Please ask about delivery rates, quality issues, or recommended actions.`;
     }
 
-    setSuccessMessage(response);
-    setNewSupplier({ name: "", material: "", qualityRejects: "", poExceptions: "" });
+    // Add user question and AI response to chat history
+    setChatHistory(prev => [...prev, { role: "user", text: chatInput }, { role: "ai", text: response }]);
+    setChatInput("");
   };
 
-  // ACTIONS & VALIDATION (ALLOWS UNLIMITED STATE CHANGES)
   const handleAction = (action) => {
     setErrorMessage("");
     setSuccessMessage("");
 
     if (!selectedSupplier) return;
 
-    // Validation: Cannot approve a high-risk supplier with bad quality
     const rejectPct = (selectedSupplier.qualityRejects / selectedSupplier.totalReceived * 100);
     if (action === "Approved" && rejectPct > 10) {
       setErrorMessage("Validation Failed: Cannot approve a supplier with a quality rejection rate above 10%.");
@@ -130,7 +115,6 @@ export default function App() {
     setSuccessMessage(`Decision recorded: ${action} for ${selectedSupplier.id}`);
   };
 
-  // ADD NEW SUPPLIER (Mandatory Fields)
   const handleAddSupplier = (e) => {
     e.preventDefault();
     setErrorMessage("");
@@ -223,7 +207,7 @@ export default function App() {
             </thead>
             <tbody>
               {filteredSuppliers.map(s => (
-                <tr key={s.id} onClick={() => { setSelectedSupplier(s); setErrorMessage(""); setSuccessMessage(""); }} className={selectedSupplier?.id === s.id ? "active-row" : ""}>
+                <tr key={s.id} onClick={() => handleSelectSupplier(s)} className={selectedSupplier?.id === s.id ? "active-row" : ""}>
                   <td>{s.id} - {s.name}</td>
                   <td>{s.material}</td>
                   <td>{Math.round(s.onTimeDeliveries / s.totalDeliveries * 100)}%</td>
@@ -256,21 +240,6 @@ export default function App() {
                 <p className="risk-level">Risk Level: {getAISummary(selectedSupplier).risk}</p>
               </div>
 
-              {/* INTERACTIVE AI */}
-              <div className="ai-chat-box">
-                <p className="ai-chat-label">💬 Ask AI about this supplier</p>
-                {successMessage && <div className="ai-response">{successMessage}</div>}
-                <form onSubmit={handleAskAI} className="ai-chat-form">
-                  <input 
-                    type="text" 
-                    placeholder="e.g., What is the delivery rate?" 
-                    value={newSupplier.name} 
-                    onChange={(e) => setNewSupplier({...newSupplier, name: e.target.value})} 
-                  />
-                  <button type="submit" className="btn btn-ask-ai">Ask</button>
-                </form>
-              </div>
-
               {/* ACTION BUTTONS */}
               <div className="action-buttons">
                 <button className="btn btn-approve" onClick={() => handleAction("Approved")}>Approve Supplier</button>
@@ -286,6 +255,46 @@ export default function App() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* FLOATING AI CHAT WINDOW */}
+      <div className={`ai-chat-window ${isChatOpen ? "open" : ""}`}>
+        {isChatOpen && (
+          <>
+            <div className="chat-header">
+              <span>🤖 AI Assistant</span>
+              <button onClick={() => setIsChatOpen(false)} className="chat-close-btn">✕</button>
+            </div>
+            <div className="chat-body">
+              {selectedSupplier ? (
+                <>
+                  {chatHistory.map((msg, index) => (
+                    <div key={index} className={`chat-message ${msg.role}`}>
+                      {msg.text}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div className="chat-placeholder">Select a supplier to start asking questions.</div>
+              )}
+            </div>
+            <form onSubmit={handleAskAI} className="chat-input-area">
+              <input 
+                type="text" 
+                placeholder="Ask about delivery, quality..." 
+                value={chatInput} 
+                onChange={(e) => setChatInput(e.target.value)} 
+                disabled={!selectedSupplier}
+              />
+              <button type="submit" className="chat-send-btn">➤</button>
+            </form>
+          </>
+        )}
+      </div>
+
+      {/* FLOATING AI BUBBLE */}
+      <div className="ai-float-bubble" onClick={() => setIsChatOpen(!isChatOpen)}>
+        {isChatOpen ? "✕" : "🤖"}
       </div>
     </div>
   );
